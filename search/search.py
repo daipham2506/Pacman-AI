@@ -72,6 +72,33 @@ def tinyMazeSearch(problem):
     w = Directions.WEST
     return  [s, s, w, s, w, w, s, w]
 
+def generalSearch(problem, fringe):
+    """
+    Defines a general algorithm to search a graph.
+    """
+    # fringe.push(state, action, cost)
+    fringe.push([(problem.getStartState(), None, 0)])
+    visited = set()
+
+    while fringe:
+        path = fringe.pop()
+        # i.e. [(root_state, None, 0), (new_state, 'West', 1)][-1][0] = (new_state, 'West', 1)[0] = new_state
+        currentState = path[-1][0]
+
+        if problem.isGoalState(currentState):
+            # return the actions to the goal state, ignore the first action None
+            return [action for (_, action, _) in path[1:]]
+            
+        if currentState not in visited:
+            visited.add(currentState)
+            for successor in problem.getSuccessors(currentState):
+                # succesor like this format: (state, action, cost)
+                if successor[0] not in visited: 
+                    fringe.push(path + [successor])
+
+    # if search fail, return list action empty
+    return []
+
 def depthFirstSearch(problem):
     """
     Search the deepest nodes in the search tree first.
@@ -86,18 +113,20 @@ def depthFirstSearch(problem):
     print("Is the start a goal?", problem.isGoalState(problem.getStartState()))
     print("Start's successors:", problem.getSuccessors(problem.getStartState()))
     """
-    "*** YOUR CODE HERE ***"
-    util.raiseNotDefined()
+    return generalSearch(problem, util.Stack())
 
 def breadthFirstSearch(problem):
     """Search the shallowest nodes in the search tree first."""
-    "*** YOUR CODE HERE ***"
-    util.raiseNotDefined()
+    return generalSearch(problem, util.Queue())
 
 def uniformCostSearch(problem):
     """Search the node of least total cost first."""
-    "*** YOUR CODE HERE ***"
-    util.raiseNotDefined()
+    # The cost for UCS only the backward cost
+    # calculate the cost of the actions using problem.getCostOfActions
+    cost = lambda path: problem.getCostOfActions([action for (_, action, _) in path[1:]])
+    # Construct an empty priority queue using this backwards cost
+    priorityQueue = util.PriorityQueueWithFunction(cost)
+    return generalSearch(problem, priorityQueue)
 
 def nullHeuristic(state, problem=None):
     """
@@ -108,8 +137,16 @@ def nullHeuristic(state, problem=None):
 
 def aStarSearch(problem, heuristic=nullHeuristic):
     """Search the node that has the lowest combined cost and heuristic first."""
-    "*** YOUR CODE HERE ***"
-    util.raiseNotDefined()
+    # The cost for a* seach is f(x) = g(x) + h(x)
+    # The backward cost defined in UCS is g(x)
+    # The heuristic is h(x), heuristic(state, problem),
+
+    cost = lambda path: problem.getCostOfActions([action for (_, action, _) in path[1:]]) + heuristic(path[-1][0], problem)
+
+    # Construct an empty priority queue that sorts using f(x)
+    priorityQueue = util.PriorityQueueWithFunction(cost)
+
+    return generalSearch(problem, priorityQueue)
 
 
 # Abbreviations
