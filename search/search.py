@@ -72,7 +72,7 @@ def tinyMazeSearch(problem):
     w = Directions.WEST
     return  [s, s, w, s, w, w, s, w]
 
-def generalSearch(problem, fringe):
+def graphSearch(problem, fringe):
     """
     Defines a general algorithm to search a graph.
     """
@@ -113,11 +113,11 @@ def depthFirstSearch(problem):
     print("Is the start a goal?", problem.isGoalState(problem.getStartState()))
     print("Start's successors:", problem.getSuccessors(problem.getStartState()))
     """
-    return generalSearch(problem, util.Stack())
+    return graphSearch(problem, util.Stack())
 
 def breadthFirstSearch(problem):
     """Search the shallowest nodes in the search tree first."""
-    return generalSearch(problem, util.Queue())
+    return graphSearch(problem, util.Queue())
 
 def uniformCostSearch(problem):
     """Search the node of least total cost first."""
@@ -126,7 +126,7 @@ def uniformCostSearch(problem):
     cost = lambda path: problem.getCostOfActions([action for (_, action, _) in path[1:]])
     # Construct an empty priority queue using this backwards cost
     priorityQueue = util.PriorityQueueWithFunction(cost)
-    return generalSearch(problem, priorityQueue)
+    return graphSearch(problem, priorityQueue)
 
 def nullHeuristic(state, problem=None):
     """
@@ -146,7 +146,7 @@ def aStarSearch(problem, heuristic=nullHeuristic):
     # Construct an empty priority queue that sorts using f(x)
     priorityQueue = util.PriorityQueueWithFunction(cost)
 
-    return generalSearch(problem, priorityQueue)
+    return graphSearch(problem, priorityQueue)
 
 
 # Abbreviations
