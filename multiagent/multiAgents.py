@@ -77,16 +77,14 @@ class ReflexAgent(Agent):
 
         closest_ghost = min([manhattanDistance(newPos, ghost.getPosition()) for ghost in newGhostStates])
 
+        ghost_dist = -1000
         if closest_ghost:
             ghost_dist = -10/closest_ghost
-        else:
-            ghost_dist = -1000
-
+            
+        closest_food = 0
         foodList = newFood.asList()
         if foodList:
             closest_food = min([manhattanDistance(newPos, food) for food in foodList])
-        else:
-            closest_food = 0
 
         # large weight to number of food left
         return (-2 * closest_food) + ghost_dist - (100*len(foodList))
@@ -150,34 +148,36 @@ class MinimaxAgent(MultiAgentSearchAgent):
         Returns whether or not the game state is a losing state
         """
         "*** YOUR CODE HERE ***"
-        def minimax_search(state, agentIndex, depth):
-            # if in min layer and last ghost
-            if agentIndex == state.getNumAgents():
-                # if reached max depth, evaluate state
-                if depth == self.depth:
-                    return self.evaluationFunction(state)
-                # otherwise start new max layer with bigger depth
-                else:
-                    return minimax_search(state, 0, depth + 1)
-            # if not min layer and last ghost
-            else:
-                moves = state.getLegalActions(agentIndex)
-                # if nothing can be done, evaluate the state
-                if len(moves) == 0:
-                    return self.evaluationFunction(state)
-                # get all the minimax values for the next layer with each node being a possible state after a move
-                next = (minimax_search(state.generateSuccessor(agentIndex, m), agentIndex + 1, depth) for m in moves)
-
-                # if max layer, return max of layer below
+        def minimax(state, depth, agentIndex):
+            currentDepth = depth
+            #A single search ply is considered to be one Pacman move and all the ghosts' responses
+            #so in the pacman's term, the depth must +1
+            if agentIndex == 0:
+                currentDepth = depth + 1
+            #when reach the end of the minimax tree, return the socre
+            if state.isWin() or state.isLose() or len(state.getLegalActions(agentIndex)) == 0 or currentDepth == self.depth:
+                return self.evaluationFunction(state)
+            #the list is used to store the score of the successors
+            #if is pacman's turn (agentIndex == 0), return the largest score in the list, and the next agent to move is ghost 1
+            #if is ghost's turn (agentIndex > 0), retur the smallest score in the list, and the next agent is agentIndex+1
+            #if the agent is the last ghost(agentIndex == gameState.getNumAgents()-1), means the next turn is pacman
+            list_minimax = []
+            for action in state.getLegalActions(agentIndex):
                 if agentIndex == 0:
-                    return max(next)
-                # if min layer, return min of layer below
+                    nextAgent = 1
+                elif agentIndex == gameState.getNumAgents()-1:
+                    nextAgent = 0
                 else:
-                    return min(next)
-        # select the action with the greatest minimax value
-        result = max(gameState.getLegalActions(0), key=lambda x: minimax_search(gameState.generateSuccessor(0, x), 1, 1))
+                    nextAgent = agentIndex +1
 
-        return result
+                list_minimax += [minimax(state.generateSuccessor(agentIndex, action), currentDepth, nextAgent)]
+
+            if agentIndex == 0:
+                return max(list_minimax)
+            else:
+                return min(list_minimax)
+
+        return max(gameState.getLegalActions(0), key = lambda x: minimax(gameState.generateSuccessor(0, x), 0, 1))
 
 class AlphaBetaAgent(MultiAgentSearchAgent):
     """
@@ -246,35 +246,36 @@ class ExpectimaxAgent(MultiAgentSearchAgent):
         legal moves.
         """
         "*** YOUR CODE HERE ***"
-        def expectimax_search(state, agentIndex, depth):
-            # if in min layer and last ghost
-            if agentIndex == state.getNumAgents():
-                # if reached max depth, evaluate state
-                if depth == self.depth:
-                    return self.evaluationFunction(state)
-                # otherwise start new max layer with bigger depth
-                else:
-                    return expectimax_search(state, 0, depth + 1)
-            # if not min layer and last ghost
-            else:
-                moves = state.getLegalActions(agentIndex)
-                # if nothing can be done, evaluate the state
-                if len(moves) == 0:
-                    return self.evaluationFunction(state)
-                # get all the minimax values for the next layer with each node being a possible state after a move
-                next = (expectimax_search(state.generateSuccessor(agentIndex, m), agentIndex + 1, depth) for m in moves)
+        def expectimax(state, depth, agentIndex):
+            currentDepth = depth
+            #A single search ply is considered to be one Pacman move and all the ghosts' responses
+            #so in the pacman's term, the depth must +1
+            if agentIndex == 0:
+                currentDepth = depth + 1
+            if state.isWin() or state.isLose() or len(state.getLegalActions(agentIndex)) == 0 or currentDepth == self.depth:
+                return self.evaluationFunction(state)
 
-                # if max layer, return max of layer below
+            #the list is used to store the socre of the successors
+            #if is pacman's turn (agentIndex == 0), return the largest score in the list, and the next agent to move is ghost 1
+            #if is ghost's turn (agentIndex > 0), retur the average score of the list, and the next agent is agentIndex+1
+            #if the agent is the last ghost(agentIndex == gameState.getNumAgents()-1), means the next turn is pacman
+            lists = []
+            for action in state.getLegalActions(agentIndex):
                 if agentIndex == 0:
-                    return max(next)
-                # if min layer, return expectimax values
+                    nextAgent = 1
+                elif agentIndex == gameState.getNumAgents()-1:
+                    nextAgent = 0
                 else:
-                    l = list(next)
-                    return sum(l) / len(l)
-        # select the action with the greatest minimax value
-        result = max(gameState.getLegalActions(0), key=lambda x: expectimax_search(gameState.generateSuccessor(0, x), 1, 1))
+                    nextAgent = agentIndex +1
 
-        return result
+                lists += [expectimax(state.generateSuccessor(agentIndex, action), currentDepth, nextAgent)]
+
+            if agentIndex == 0:
+                return max(lists)
+            else:
+                return sum(lists)/ len(state.getLegalActions(agentIndex))
+
+        return max(gameState.getLegalActions(0), key = lambda x: expectimax(gameState.generateSuccessor(0, x), 0, 1))
 
 def betterEvaluationFunction(currentGameState):
     """
@@ -284,7 +285,7 @@ def betterEvaluationFunction(currentGameState):
     DESCRIPTION: <write something here so we know what you did>
     """
     "*** YOUR CODE HERE ***"
-    pacmanPosition = currentGameState.getPacmanPosition()
+    pacmanPos = currentGameState.getPacmanPosition()
     ghostPositions = currentGameState.getGhostPositions()
     ghostStates = currentGameState.getGhostStates()
     scaredTimes = [ghostState.scaredTimer for ghostState in ghostStates]
@@ -292,8 +293,8 @@ def betterEvaluationFunction(currentGameState):
     foodList = currentGameState.getFood().asList()
     numFood = currentGameState.getNumFood()
     badGhost = []
-    yummyGhost = []
-    total = 0
+    goodGhost = []
+
     win = 0
     lose = 0
     score = 0
@@ -303,22 +304,21 @@ def betterEvaluationFunction(currentGameState):
         win = float("inf")
     elif currentGameState.isLose():
         lose = float("-inf")
-    score = 10000 * currentGameState.getScore()
-    capsules = 10000000000/(numCapsules+1)
+    score = 1e4 * currentGameState.getScore()
+    capsules = 1e10/(numCapsules+1)
     for food in foodList:
-        foodScore += 50/(manhattanDistance(pacmanPosition, food)) * numFood
-    for index in range(len(scaredTimes)):
-        if scaredTimes[index] == 0:
-            badGhost.append(ghostPositions[index])
+        foodScore += 10/(manhattanDistance(pacmanPos, food)) * numFood
+    for i in range(len(scaredTimes)):
+        if scaredTimes[i] == 0:
+            badGhost += [ghostPositions[i]]
         else:
-            yummyGhost.append(ghostPositions[index])
-    for index in range(len(yummyGhost)):
-        ghost += 1/(((manhattanDistance(pacmanPosition, yummyGhost[index])) * scaredTimes[index])+1)
+            goodGhost += [ghostPositions[i]]
+    for i in range(len(goodGhost)):
+        ghost += 1/(((manhattanDistance(pacmanPos, goodGhost[i])) * scaredTimes[i])+1)
     for death in badGhost:
-        ghost +=  manhattanDistance(pacmanPosition, death)
-    total = win + lose + score + capsules + foodScore + ghost
-    return total
+        ghost +=  manhattanDistance(pacmanPos, death)
 
+    return win + lose + score + capsules + foodScore + ghost
 
 # Abbreviation
 better = betterEvaluationFunction
